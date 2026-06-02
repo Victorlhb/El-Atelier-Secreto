@@ -27,7 +27,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   compactCard: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md - 2,
   },
   row: {
     flexDirection: "row",
@@ -45,9 +46,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   compactEmblem: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   copy: {
     flex: 1,
@@ -61,8 +62,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   compactTitle: {
-    fontSize: 28,
-    lineHeight: 32,
+    fontSize: 20,
+    lineHeight: 26,
   },
   description: {
     color: palette.textSoft,
@@ -71,8 +72,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyRegularFamily,
   },
   compactDescription: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 20,
   },
   star: {
     position: "absolute",

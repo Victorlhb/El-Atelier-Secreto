@@ -1,15 +1,15 @@
 import { Platform } from "react-native";
 
 export const palette = {
-  background: "#F2E7D4",
+  background: "#9f8b69",
   backgroundAccent: "#E8DCC8",
   surface: "#FCF4E7",
   surfaceMuted: "#F1E2CC",
   card: "#FBF3E4",
   cardAlt: "#F7EAD4",
   text: "#2B241A",
-  textSoft: "#675741",
-  textMuted: "#8F7E69",
+  textSoft: "#4F4334",
+  textMuted: "#756652",
   line: "#D5BB8B",
   lineStrong: "#A78342",
   gold: "#C89C4E",

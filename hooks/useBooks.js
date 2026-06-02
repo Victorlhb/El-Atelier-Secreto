@@ -1,14 +1,23 @@
-import { useMemo } from "react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PAGE_SIZE } from "../constants/config";
-import { mockBooks } from "../constants/mockData";
-import { getLocalBookById, getLibraryShelfBooks, searchLocalBooks } from "../lib/localLibrary";
+import { fetchGoogleBooksMetadata } from "../lib/googleBooks";
+import {
+  getLocalBookById,
+  getLibraryShelfBooks,
+  searchLocalBooks,
+  updateLocalBookMetadata,
+} from "../lib/localLibrary";
 import { useAppStore } from "../store/useAppStore";
+
+const metadataRequestsInFlight = new Set();
+const metadataAttempts = new Map();
+const METADATA_RETRY_WINDOW_MS = 10 * 60 * 1000;
 
 function normalizeBook(book) {
   return {
     ...book,
-    description: book.description || "Sinopsis pendiente.",
+    description: book.description || "Sinopsis pendiente para este tomo.",
     genre: Array.isArray(book.genre) ? book.genre : [],
     language: book.language || "es",
     tone: book.tone || (book.source === "local" ? "En dispositivo" : "Tomo"),
@@ -19,6 +28,24 @@ function normalizeBook(book) {
     pages: typeof book.pages === "number" ? book.pages : 0,
     source: book.source || "local",
   };
+}
+
+function hasSpecificDescription(description) {
+  const value = String(description || "").trim();
+
+  return (
+    Boolean(value) &&
+    value !== "Sinopsis pendiente para este tomo." &&
+    value !== "Disponible en tu dispositivo para lectura local."
+  );
+}
+
+function needsMetadata(book) {
+  if (!book || book.source !== "local") {
+    return false;
+  }
+
+  return !book.cover_url || !hasSpecificDescription(book.description);
 }
 
 async function searchBooksPage(params, page) {
@@ -58,19 +85,12 @@ export function useBookDetail(id) {
     queryKey: ["book", id],
     enabled: Boolean(id),
     queryFn: async () => {
-      if (typeof id === "string" && id.startsWith("local:")) {
-        const localBook = await getLocalBookById(id);
-        if (!localBook) {
-          throw new Error("Libro local no encontrado.");
-        }
-        return normalizeBook(localBook);
-      }
-
-      const book = mockBooks.find((item) => item.id === id);
-      if (!book) {
+      const localBook = await getLocalBookById(id);
+      if (!localBook) {
         throw new Error("Libro no encontrado.");
       }
-      return normalizeBook({ ...book, source: "local" });
+
+      return normalizeBook(localBook);
     },
   });
 }
@@ -82,15 +102,12 @@ export function useDiscoverShelves() {
     queryKey: ["discover-shelves", favoriteIds],
     queryFn: async () => {
       const localShelves = await getLibraryShelfBooks({ favoriteIds, limit: 8 });
-      const continueReading = localShelves.recent[0] || normalizeBook({ ...mockBooks[0], source: "local" });
-      const favorites =
-        localShelves.favorites.length > 0
-          ? localShelves.favorites
-          : mockBooks.filter((book) => book.favorite).map((book) => normalizeBook({ ...book, source: "local" }));
+      const continueReading =
+        localShelves.recent.find((book) => book.progress > 0) || localShelves.recent[0] || null;
 
       return {
         continueReading,
-        favorites,
+        favorites: localShelves.favorites,
       };
     },
   });
@@ -103,12 +120,8 @@ export function useLibraryShelves() {
     queryKey: ["library-shelves", favoriteIds],
     queryFn: async () => {
       const localShelves = await getLibraryShelfBooks({ favoriteIds, limit: 24 });
-      const fallbackBooks = mockBooks.map((book) => normalizeBook({ ...book, source: "local" }));
-      const recent = localShelves.recent.length > 0 ? localShelves.recent : fallbackBooks.slice(0, 12);
-      const favorites =
-        localShelves.favorites.length > 0
-          ? localShelves.favorites
-          : fallbackBooks.filter((book) => book.favorite).slice(0, 8);
+      const recent = localShelves.recent;
+      const favorites = localShelves.favorites;
       const inProgress = recent.filter((book) => book.progress > 0);
 
       return {
@@ -118,4 +131,93 @@ export function useLibraryShelves() {
       };
     },
   });
+}
+
+export function useVisibleBookMetadata(books = []) {
+  const queryClient = useQueryClient();
+
+  const candidates = useMemo(() => {
+    const visibleBooks = new Map();
+
+    for (const book of books) {
+      if (book?.id && needsMetadata(book)) {
+        visibleBooks.set(book.id, book);
+      }
+    }
+
+    return Array.from(visibleBooks.values()).slice(0, 8);
+  }, [books]);
+
+  const candidateKey = useMemo(
+    () =>
+      candidates
+        .map((book) => `${book.id}:${book.cover_url ? 1 : 0}:${hasSpecificDescription(book.description) ? 1 : 0}`)
+        .join("|"),
+    [candidates]
+  );
+
+  useEffect(() => {
+    if (candidates.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function hydrateVisibleBooks() {
+      let didUpdate = false;
+
+      for (const book of candidates) {
+        const lastAttemptAt = metadataAttempts.get(book.id) || 0;
+
+        if (
+          metadataRequestsInFlight.has(book.id) ||
+          Date.now() - lastAttemptAt < METADATA_RETRY_WINDOW_MS
+        ) {
+          continue;
+        }
+
+        metadataAttempts.set(book.id, Date.now());
+        metadataRequestsInFlight.add(book.id);
+
+        try {
+          const metadata = await fetchGoogleBooksMetadata({
+            title: book.title,
+            author: book.author,
+          });
+
+          if (cancelled || !metadata) {
+            continue;
+          }
+
+          if (metadata.coverUrl || metadata.description || metadata.pageCount > 0) {
+            const updated = await updateLocalBookMetadata({
+              bookId: book.id,
+              coverUrl: metadata.coverUrl,
+              description: metadata.description,
+              pages: metadata.pageCount,
+            });
+
+            didUpdate = didUpdate || updated;
+          }
+        } catch {
+          // Metadata enrichment is optional; the local library remains usable without it.
+        } finally {
+          metadataRequestsInFlight.delete(book.id);
+        }
+      }
+
+      if (!cancelled && didUpdate) {
+        queryClient.invalidateQueries({ queryKey: ["books"] });
+        queryClient.invalidateQueries({ queryKey: ["book"] });
+        queryClient.invalidateQueries({ queryKey: ["discover-shelves"] });
+        queryClient.invalidateQueries({ queryKey: ["library-shelves"] });
+      }
+    }
+
+    hydrateVisibleBooks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [candidateKey, candidates, queryClient]);
 }

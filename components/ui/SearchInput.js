@@ -2,18 +2,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TextInput, View } from "react-native";
 import { palette, spacing, typography } from "../../constants/theme";
 
-export function SearchInput({ value, onChangeText, placeholder = "Buscar por titulo, autora o saga" }) {
+export function SearchInput({
+  value,
+  onChangeText,
+  placeholder = "Buscar por titulo, autora o saga",
+  compact = false,
+}) {
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, compact && styles.compactWrapper]}>
       <Ionicons name="search-outline" size={18} color={palette.textSoft} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={palette.textSoft}
-        style={styles.input}
+        style={[styles.input, compact && styles.compactInput]}
       />
-      <View style={styles.emblem}>
+      <View style={[styles.emblem, compact && styles.compactEmblem]}>
         <Ionicons name="sparkles-outline" size={18} color={palette.goldDeep} />
       </View>
     </View>
@@ -32,11 +37,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     minHeight: 62,
   },
+  compactWrapper: {
+    minHeight: 52,
+    borderRadius: 18,
+    paddingHorizontal: spacing.sm + 2,
+  },
   input: {
     flex: 1,
     color: palette.text,
     fontSize: 18,
     fontFamily: typography.bodyRegularFamily,
+  },
+  compactInput: {
+    fontSize: 16,
   },
   emblem: {
     width: 34,
@@ -47,5 +60,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(251,241,223,0.95)",
+  },
+  compactEmblem: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
 });

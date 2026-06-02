@@ -1,9 +1,8 @@
 import { create } from "zustand";
-import { mockBooks } from "../constants/mockData";
 
 export const useAppStore = create((set, get) => ({
-  favoriteIds: mockBooks.filter((book) => book.favorite).map((book) => book.id),
-  downloadedIds: mockBooks.filter((book) => book.downloaded).map((book) => book.id),
+  favoriteIds: [],
+  downloadedIds: [],
   activeGenres: [],
   searchQuery: "",
   downloads: {},
@@ -34,6 +33,10 @@ export const useAppStore = create((set, get) => ({
       favoriteIds: state.favoriteIds.includes(bookId)
         ? state.favoriteIds.filter((item) => item !== bookId)
         : [...state.favoriteIds, bookId],
+    })),
+  removeFavorite: (bookId) =>
+    set((state) => ({
+      favoriteIds: state.favoriteIds.filter((item) => item !== bookId),
     })),
   setDownloadProgress: (bookId, progress) =>
     set((state) => ({
@@ -66,6 +69,17 @@ export const useAppStore = create((set, get) => ({
         ...patch,
       },
     })),
+  purgeBookState: (bookId) =>
+    set((state) => {
+      const nextDownloads = { ...state.downloads };
+      delete nextDownloads[bookId];
+
+      return {
+        favoriteIds: state.favoriteIds.filter((item) => item !== bookId),
+        downloadedIds: state.downloadedIds.filter((item) => item !== bookId),
+        downloads: nextDownloads,
+      };
+    }),
   updateReaderPreferences: (patch) =>
     set((state) => ({
       readerPreferences: {

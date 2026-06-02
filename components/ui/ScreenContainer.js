@@ -15,15 +15,37 @@ export function ScreenContainer({
   const resolvedEdges = edges || safeEdges;
 
   const inner = (
-    <View style={[styles.content, { maxWidth: contentWidth }, contentContainerStyle]}>{children}</View>
+    <View
+      style={[
+        styles.content,
+        !scroll && styles.contentFill,
+        { maxWidth: contentWidth },
+        contentContainerStyle,
+      ]}
+    >
+      {children}
+    </View>
   );
 
   return (
-    <View style={[styles.root, tone === "paper" && styles.paperRoot]}>
+    <View style={[styles.root, tone === "paper" && styles.paperRoot, tone === "night" && styles.nightRoot]}>
       {tone === "atelier" ? <View style={styles.inkBand} /> : null}
-      <View style={[styles.glowLeft, tone === "paper" && styles.paperGlowLeft]} />
-      <View style={[styles.glowRight, tone === "paper" && styles.paperGlowRight]} />
+      <View
+        style={[
+          styles.glowLeft,
+          tone === "paper" && styles.paperGlowLeft,
+          tone === "night" && styles.nightGlowLeft,
+        ]}
+      />
+      <View
+        style={[
+          styles.glowRight,
+          tone === "paper" && styles.paperGlowRight,
+          tone === "night" && styles.nightGlowRight,
+        ]}
+      />
       {tone === "paper" ? <View style={styles.paperVeil} /> : null}
+      {tone === "night" ? <View style={styles.nightVeil} /> : null}
       <SafeAreaView style={styles.safeArea} edges={resolvedEdges}>
         {scroll ? (
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -43,7 +65,10 @@ const styles = StyleSheet.create({
     backgroundColor: palette.background,
   },
   paperRoot: {
-    backgroundColor: "#F7F1E7",
+    backgroundColor: "#cec1ab",
+  },
+  nightRoot: {
+    backgroundColor: "#0B1713",
   },
   inkBand: {
     position: "absolute",
@@ -70,6 +95,14 @@ const styles = StyleSheet.create({
     borderRadius: 110,
     backgroundColor: "rgba(201,162,74,0.08)",
   },
+  nightGlowLeft: {
+    top: 34,
+    left: -46,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(200,156,78,0.06)",
+  },
   glowRight: {
     position: "absolute",
     top: 128,
@@ -87,10 +120,23 @@ const styles = StyleSheet.create({
     borderRadius: 110,
     backgroundColor: "rgba(76,125,137,0.08)",
   },
+  nightGlowRight: {
+    top: 120,
+    right: -64,
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    backgroundColor: "rgba(76,125,137,0.08)",
+  },
   paperVeil: {
     position: "absolute",
     inset: 0,
     backgroundColor: "rgba(255,253,249,0.22)",
+  },
+  nightVeil: {
+    position: "absolute",
+    inset: 0,
+    backgroundColor: "rgba(6,12,10,0.26)",
   },
   safeArea: {
     flex: 1,
@@ -104,5 +150,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     gap: spacing.lg,
+  },
+  contentFill: {
+    flex: 1,
   },
 });

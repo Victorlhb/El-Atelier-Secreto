@@ -1,8 +1,15 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { radii } from "../../constants/theme";
 
 export function BookCover({ book, tall = false, style }) {
   const colors = book.coverPalette || ["#1A3026", "#3B5A46", "#C89C4E"];
+  const [imageFailed, setImageFailed] = useState(false);
+  const hasCoverImage = Boolean(book.cover_url) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [book.cover_url]);
 
   return (
     <View
@@ -16,14 +23,22 @@ export function BookCover({ book, tall = false, style }) {
         style,
       ]}
     >
-      <View style={[styles.layer, { backgroundColor: colors[1], opacity: 0.26 }]} />
+      {hasCoverImage ? (
+        <Image
+          source={{ uri: book.cover_url }}
+          style={styles.image}
+          resizeMode="cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : null}
+      <View style={[styles.layer, { backgroundColor: colors[1], opacity: hasCoverImage ? 0.08 : 0.26 }]} />
       <View style={[styles.orbit, { borderColor: colors[2] }]} />
       <View style={[styles.topRibbon, { backgroundColor: colors[2] }]} />
       <View style={[styles.bottomRibbon, { backgroundColor: colors[2] }]} />
       <View style={styles.frame} />
       <View style={styles.innerFrame} />
-      <Text style={styles.spine}>{book.title}</Text>
-      <Text style={styles.author}>{book.author}</Text>
+      {!hasCoverImage ? <Text style={styles.spine}>{book.title}</Text> : null}
+      {!hasCoverImage ? <Text style={styles.author}>{book.author}</Text> : null}
     </View>
   );
 }
@@ -47,6 +62,9 @@ const styles = StyleSheet.create({
   layer: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: radii.lg,
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
   },
   orbit: {
     position: "absolute",

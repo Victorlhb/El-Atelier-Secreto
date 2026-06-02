@@ -1,57 +1,59 @@
 import { useMemo } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
-import { BookCard } from "../../components/books/BookCard";
+import { BookGridTile } from "../../components/books/BookGridTile";
 import { BookSearch } from "../../components/books/BookSearch";
-import { HeroBookCard } from "../../components/books/HeroBookCard";
-import { LocalLibraryPanel } from "../../components/books/LocalLibraryPanel";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { AtelierBanner } from "../../components/ui/AtelierBanner";
 import { ScreenContainer } from "../../components/ui/ScreenContainer";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { AtelierTopBar } from "../../components/ui/AtelierTopBar";
 import { palette, spacing } from "../../constants/theme";
-import { useBookSearch, useDiscoverShelves } from "../../hooks/useBooks";
-import { useLocalLibraryImport, useLocalLibraryStats } from "../../hooks/useLocalLibrary";
+import { useBookSearch, useVisibleBookMetadata } from "../../hooks/useBooks";
+import { useResponsive } from "../../hooks/useResponsive";
 import { useAppStore } from "../../store/useAppStore";
 
 export default function DiscoverScreen() {
   const router = useRouter();
+  const { isTablet, isLargeTablet } = useResponsive();
   const searchQuery = useAppStore((state) => state.searchQuery);
   const activeGenres = useAppStore((state) => state.activeGenres);
-  const localLibraryState = useAppStore((state) => state.localLibrary);
+  const favoriteIds = useAppStore((state) => state.favoriteIds);
   const setSearchQuery = useAppStore((state) => state.setSearchQuery);
   const toggleGenre = useAppStore((state) => state.toggleGenre);
+  const toggleFavorite = useAppStore((state) => state.toggleFavorite);
 
-  const shouldShowResults = Boolean(searchQuery.trim()) || activeGenres.length > 0;
+  const shouldShowFilteredResults = Boolean(searchQuery.trim()) || activeGenres.length > 0;
 
-  const shelves = useDiscoverShelves();
-  const search = useBookSearch({ enabled: shouldShowResults });
-  const localStats = useLocalLibraryStats();
-  const importLocalLibrary = useLocalLibraryImport();
+  const search = useBookSearch({ enabled: true });
   const results = useMemo(
-    () => (shouldShowResults ? search.data?.pages.flatMap((page) => page.items) || [] : []),
-    [search.data?.pages, shouldShowResults]
+    () => search.data?.pages.flatMap((page) => page.items) || [],
+    [search.data?.pages]
   );
-  const continueReading = shelves.data?.continueReading;
-  const favorites = shelves.data?.favorites || [];
+  const numColumns = isLargeTablet ? 3 : isTablet ? 2 : 1;
+  const gridItemWidth = isLargeTablet ? 316 : isTablet ? 336 : undefined;
+
+  useVisibleBookMetadata(results);
 
   return (
     <ScreenContainer scroll={false} edges={["top"]}>
       <FlatList
-        data={shouldShowResults ? results : []}
+        key={`discover-grid-${numColumns}`}
+        style={styles.list}
+        data={results}
+        numColumns={numColumns}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <BookCard
-            book={item}
-            onPress={() => router.push(`/book/${item.id}`)}
-            detail={
-              item.source === "local"
-                ? `${item.genre?.[0] || item.format} / ${item.pages > 0 ? `${item.pages} pags.` : "Local"}`
-                : `${item.genre.join(" / ")} / ${item.pages} pags.`
-            }
-            showProgress={false}
-          />
+          <View style={styles.gridItem}>
+            <BookGridTile
+              book={item}
+              width={gridItemWidth}
+              isSaved={favoriteIds.includes(item.id)}
+              onPress={() => router.push(`/book/${item.id}`)}
+              onRead={() => router.push(`/reader/${item.id}`)}
+              onToggleSaved={() => toggleFavorite(item.id)}
+            />
+          </View>
         )}
         ListHeaderComponent={
           <View style={styles.stack}>
@@ -61,14 +63,7 @@ export default function DiscoverScreen() {
               title="Abre un tomo"
               description="Busca en tu dispositivo, reanuda la lectura y deja que el atelier ordene tus tomos sin salir del telefono."
               icon="sparkles-outline"
-            />
-
-            <LocalLibraryPanel
-              stats={localStats.data}
-              state={localLibraryState}
-              loading={importLocalLibrary.isPending}
-              onImport={() => importLocalLibrary.mutate()}
-              variant="discover"
+              compact
             />
 
             <BookSearch
@@ -78,76 +73,49 @@ export default function DiscoverScreen() {
               onToggleGenre={toggleGenre}
             />
 
-            {continueReading ? (
-              <HeroBookCard
-                book={continueReading}
-                onPress={() => router.push(`/book/${continueReading.id}`)}
-                onContinue={() => router.push(`/reader/${continueReading.id}`)}
-              />
-            ) : null}
-
-            {shouldShowResults ? (
-              <SectionHeader
-                eyebrow="Dispositivo"
-                title="Resultados del atelier"
-                description="Resultados ligeros para buscar sin cargar todos los tomos a la vez."
-                framed={false}
-                compact
-              />
-            ) : null}
+            <SectionHeader
+              eyebrow="Dispositivo"
+              title={shouldShowFilteredResults ? "Resultados del atelier" : "Todos tus tomos"}
+              description={
+                shouldShowFilteredResults
+                  ? "Los tomos que responden a tu busqueda aparecen aqui."
+                  : ""
+              }
+              framed={false}
+              compact
+            />
           </View>
         }
         ListFooterComponent={
           <View style={styles.footer}>
-            {shouldShowResults && search.isFetchingNextPage ? (
+            {search.isFetchingNextPage ? (
               <ActivityIndicator color={palette.goldDeep} />
             ) : null}
 
-            {shouldShowResults && !search.isFetching && results.length === 0 ? (
+            {!search.isFetching && results.length === 0 ? (
               <EmptyState
-                title="No encontramos coincidencias"
-                description="Prueba otro termino, otra categoria o cambia de origen para abrir mas caminos."
+                title={shouldShowFilteredResults ? "No encontramos coincidencias" : ""}
+                description={
+                  shouldShowFilteredResults
+                    ? "Prueba otro termino o una categoria distinta para seguir buscando en tu biblioteca."
+                    : "Importa una carpeta local para poblar este estante completo."
+                }
               />
             ) : null}
 
-            {!shouldShowResults && favorites.length > 0 ? (
-              <View style={styles.favoriteStack}>
-                <SectionHeader
-                  eyebrow="Guardados"
-                  title="Rincon querido"
-                  description="Tus tomos marcados vuelven aqui sin perder el ambiente del atelier."
-                  framed={false}
-                  compact
-                />
-                <View style={styles.compactList}>
-                  {favorites.slice(0, 3).map((book) => (
-                    <BookCard
-                      key={book.id}
-                      book={book}
-                      onPress={() => router.push(`/book/${book.id}`)}
-                      detail={
-                        book.source === "local"
-                          ? "Favorito del dispositivo"
-                          : `${book.genre.join(" / ")} / ${book.pages} pags.`
-                      }
-                      showProgress={false}
-                    />
-                  ))}
-                </View>
-              </View>
-            ) : null}
           </View>
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.content}
         onEndReachedThreshold={0.45}
         onEndReached={() => {
-          if (shouldShowResults && search.hasNextPage && !search.isFetchingNextPage) {
+          if (search.hasNextPage && !search.isFetchingNextPage) {
             search.fetchNextPage();
           }
         }}
-        initialNumToRender={7}
-        maxToRenderPerBatch={7}
+        columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
         windowSize={7}
         removeClippedSubviews
       />
@@ -161,18 +129,24 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
+  list: {
+    flex: 1,
+  },
   stack: {
     gap: spacing.md,
     paddingBottom: spacing.md,
   },
+  gridRow: {
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
+  gridItem: {
+    flex: 1,
+    width: "100%",
+    marginBottom: spacing.md,
+  },
   footer: {
     gap: spacing.md,
     paddingTop: spacing.md,
-  },
-  favoriteStack: {
-    gap: spacing.md,
-  },
-  compactList: {
-    gap: spacing.md,
   },
 });

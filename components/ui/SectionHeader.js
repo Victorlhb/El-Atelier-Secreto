@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   descriptionInverted: {
-    color: "#D9D0C3",
+    color: "#E6DDCF",
   },
   ruleRow: {
     flexDirection: "row",

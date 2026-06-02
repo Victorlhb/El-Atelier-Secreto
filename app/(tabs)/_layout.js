@@ -35,8 +35,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="recent"
         options={{
-          title: "Recientes",
-          tabBarIcon: ({ color, size }) => <Ionicons name="time-outline" color={color} size={size} />,
+          title: "Importar",
+          tabBarIcon: ({ color, size }) => <Ionicons name="folder-open-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  deleteLocalBook,
   getLibraryShelfBooks,
   getLocalLibraryStats,
   importLocalLibraryFromDevice,
@@ -79,6 +80,24 @@ export function useLocalLibraryImport() {
         status: "error",
         message: error?.message || "No se pudo indexar la biblioteca local.",
       });
+    },
+  });
+}
+
+export function useDeleteLocalBook() {
+  const queryClient = useQueryClient();
+  const purgeBookState = useAppStore((state) => state.purgeBookState);
+
+  return useMutation({
+    mutationFn: deleteLocalBook,
+    onSuccess: (_, bookId) => {
+      purgeBookState(bookId);
+
+      queryClient.invalidateQueries({ queryKey: ["local-library"] });
+      queryClient.invalidateQueries({ queryKey: ["books"] });
+      queryClient.invalidateQueries({ queryKey: ["book"] });
+      queryClient.invalidateQueries({ queryKey: ["discover-shelves"] });
+      queryClient.invalidateQueries({ queryKey: ["library-shelves"] });
     },
   });
 }

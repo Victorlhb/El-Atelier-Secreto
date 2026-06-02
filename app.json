@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "El Atelier Secreto",
+    "slug": "el-atelier-secreto",
+    "scheme": "elateliersecreto",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}

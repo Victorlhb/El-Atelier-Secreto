@@ -46,20 +46,24 @@ export default function ReaderScreen() {
   const pageIndexRef = useRef(0);
   const readerDocumentRef = useRef(null);
   const bookRef = useRef(null);
+  const isTablet = width >= 768;
   const isNightMode = preferences.theme === "noche";
+  const bottomControlInset = Math.max(insets.bottom + (isTablet ? spacing.sm : spacing.md), isTablet ? 20 : 24);
+  const baseReaderFontSize = isTablet ? 22 : 21;
+  const resolvedParagraphFamily =
+    preferences.fontWeight === "strong" ? typography.bodySemiBoldFamily : typography.bodyRegularFamily;
   const pageViewport = useMemo(() => {
     const horizontalPadding = spacing.md * 4 + 36;
     const verticalReserve =
       insets.top +
-      insets.bottom +
-      220 +
-      (width >= 768 ? 36 : 0);
+      bottomControlInset +
+      (isTablet ? 238 : 252);
 
     return {
       width: Math.max(width - horizontalPadding, 260),
       height: Math.max(height - verticalReserve, 280),
     };
-  }, [height, insets.bottom, insets.top, width]);
+  }, [bottomControlInset, height, insets.top, isTablet, width]);
 
   const persistCurrentState = async () => {
     const currentBook = bookRef.current;
@@ -102,8 +106,10 @@ export default function ReaderScreen() {
         const document = await buildReaderDocument(book, {
           width: pageViewport.width,
           height: pageViewport.height,
+          baseFontSize: baseReaderFontSize,
           fontScale: preferences.fontScale,
           lineHeight: preferences.lineHeight,
+          fontWeight: preferences.fontWeight,
         });
 
         if (cancelled) {
@@ -134,7 +140,7 @@ export default function ReaderScreen() {
     return () => {
       cancelled = true;
     };
-  }, [book, pageViewport.height, pageViewport.width, preferences.fontScale, preferences.lineHeight]);
+  }, [baseReaderFontSize, book, pageViewport.height, pageViewport.width, preferences.fontScale, preferences.fontWeight, preferences.lineHeight]);
 
   useEffect(() => {
     bookRef.current = book || null;
@@ -179,14 +185,7 @@ export default function ReaderScreen() {
 
   const pages = useMemo(() => readerDocument?.pages || [], [readerDocument?.pages]);
   const chapters = useMemo(() => readerDocument?.chapters || [], [readerDocument?.chapters]);
-  const showChapters = useMemo(() => {
-    if (chapters.length < 2 || chapters.length > 80) {
-      return false;
-    }
-
-    const reliableCount = chapters.filter((chapter) => chapter.kind === "heading" || chapter.kind === "title").length;
-    return reliableCount >= Math.max(2, Math.ceil(chapters.length * 0.35));
-  }, [chapters]);
+  const showChapters = chapters.length > 0;
   const currentPage = pages[pageIndex] || [];
   const pageLabel = useMemo(() => {
     if (!readerDocument?.pageCount) {
@@ -214,17 +213,38 @@ export default function ReaderScreen() {
     router.back();
   };
 
-  const handleAdjustFontScale = () => {
+  const handleIncreaseFontScale = () => {
     setReaderLoading(true);
     updateReaderPreferences({
-      fontScale: preferences.fontScale >= 1.25 ? 1 : preferences.fontScale + 0.05,
+      fontScale: preferences.fontScale >= 1.8 ? 1.8 : Number((preferences.fontScale + 0.1).toFixed(2)),
     });
   };
 
-  const handleAdjustLineHeight = () => {
+  const handleDecreaseFontScale = () => {
     setReaderLoading(true);
     updateReaderPreferences({
-      lineHeight: preferences.lineHeight >= 2.1 ? 1.7 : preferences.lineHeight + 0.1,
+      fontScale: preferences.fontScale <= 1 ? 1 : Number((preferences.fontScale - 0.1).toFixed(2)),
+    });
+  };
+
+  const handleIncreaseLineHeight = () => {
+    setReaderLoading(true);
+    updateReaderPreferences({
+      lineHeight: preferences.lineHeight >= 2.15 ? 2.15 : Number((preferences.lineHeight + 0.1).toFixed(2)),
+    });
+  };
+
+  const handleDecreaseLineHeight = () => {
+    setReaderLoading(true);
+    updateReaderPreferences({
+      lineHeight: preferences.lineHeight <= 1.55 ? 1.55 : Number((preferences.lineHeight - 0.1).toFixed(2)),
+    });
+  };
+
+  const handleToggleFontWeight = () => {
+    setReaderLoading(true);
+    updateReaderPreferences({
+      fontWeight: preferences.fontWeight === "strong" ? "regular" : "strong",
     });
   };
 
@@ -282,7 +302,7 @@ export default function ReaderScreen() {
   return (
     <ScreenContainer tone={isNightMode ? "night" : "paper"} scroll={false} edges={["top", "bottom"]}>
       <View style={styles.readerLayout}>
-        <View style={styles.chromeRow}>
+        <View style={[styles.chromeRow, isTablet && styles.chromeRowTablet]}>
           <Pressable style={styles.chromeButton} onPress={handleExitReader}>
             <Ionicons name="chevron-back" size={18} color={isNightMode ? "#E3D4B8" : palette.goldDeep} />
             <Text style={[styles.chromeLabel, isNightMode && styles.chromeLabelNight]}>Volver</Text>
@@ -316,7 +336,10 @@ export default function ReaderScreen() {
           </View>
         </View>
 
-        <AtelierCard style={[styles.readerSurface, isNightMode && styles.readerSurfaceNight]} tone={isNightMode ? "dark" : "alt"}>
+        <AtelierCard
+          style={[styles.readerSurface, isTablet && styles.readerSurfaceTablet, isNightMode && styles.readerSurfaceNight]}
+          tone={isNightMode ? "dark" : "alt"}
+        >
           <View {...panResponder.panHandlers} style={[styles.pageSurface, isNightMode && styles.pageSurfaceNight]}>
             {currentPage.length === 0 ? (
               <Text style={[styles.emptyPage, isNightMode && styles.emptyPageNight]}>
@@ -330,8 +353,9 @@ export default function ReaderScreen() {
                   styles.paragraph,
                   isNightMode && styles.paragraphNight,
                   {
-                    fontSize: 18 * preferences.fontScale,
-                    lineHeight: 18 * preferences.fontScale * preferences.lineHeight,
+                    fontFamily: resolvedParagraphFamily,
+                    fontSize: baseReaderFontSize * preferences.fontScale,
+                    lineHeight: baseReaderFontSize * preferences.fontScale * preferences.lineHeight,
                   },
                 ]}
               >
@@ -341,77 +365,84 @@ export default function ReaderScreen() {
           </View>
         </AtelierCard>
 
-        <View style={styles.footerRow}>
-          <Pressable
-            style={[
-              styles.navButton,
-              isNightMode && styles.navButtonNight,
-              pageIndex === 0 && styles.navButtonDisabled,
-              pageIndex === 0 && isNightMode && styles.navButtonDisabledNight,
-            ]}
-            onPress={handlePreviousPage}
-            disabled={pageIndex === 0}
+        <View style={[styles.footerShell, { paddingBottom: bottomControlInset }]}>
+          <AtelierCard
+            style={[styles.footerCard, isTablet && styles.footerCardTablet, isNightMode && styles.footerCardNight]}
+            tone={isNightMode ? "dark" : "alt"}
           >
-            <Ionicons
-              name="chevron-back"
-              size={18}
-              color={pageIndex === 0 ? (isNightMode ? "#6F6A5F" : palette.textMuted) : isNightMode ? "#F2E5C8" : palette.goldDeep}
-            />
-            <Text
-              style={[
-                styles.navLabel,
-                isNightMode && styles.navLabelNight,
-                pageIndex === 0 && styles.navLabelDisabled,
-                pageIndex === 0 && isNightMode && styles.navLabelDisabledNight,
-              ]}
-            >
-              Anterior
-            </Text>
-          </Pressable>
+            <View style={styles.footerRow}>
+              <Pressable
+                style={[
+                  styles.navButton,
+                  isNightMode && styles.navButtonNight,
+                  pageIndex === 0 && styles.navButtonDisabled,
+                  pageIndex === 0 && isNightMode && styles.navButtonDisabledNight,
+                ]}
+                onPress={handlePreviousPage}
+                disabled={pageIndex === 0}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={18}
+                  color={pageIndex === 0 ? (isNightMode ? "#6F6A5F" : palette.textMuted) : isNightMode ? "#F2E5C8" : palette.goldDeep}
+                />
+                <Text
+                  style={[
+                    styles.navLabel,
+                    isNightMode && styles.navLabelNight,
+                    pageIndex === 0 && styles.navLabelDisabled,
+                    pageIndex === 0 && isNightMode && styles.navLabelDisabledNight,
+                  ]}
+                >
+                  Anterior
+                </Text>
+              </Pressable>
 
-          <View style={styles.progressWrap}>
-            <Text style={[styles.progressLabel, isNightMode && styles.progressLabelNight]}>{pageLabel}</Text>
-            <Text style={[styles.progressSubtle, isNightMode && styles.progressSubtleNight]}>
-              {readerDocument.source === "epub"
-                ? "Progreso guardado en este dispositivo"
-                : "Vista de lectura local"}
-            </Text>
-          </View>
+              <View style={styles.progressWrap}>
+                <Text style={[styles.progressLabel, isNightMode && styles.progressLabelNight]}>{pageLabel}</Text>
+                <Text style={[styles.progressSubtle, isNightMode && styles.progressSubtleNight]}>
+                  {readerDocument.source === "preview"
+                    ? "Vista parcial del tomo"
+                    : "Tu pagina se guarda al salir"}
+                </Text>
+              </View>
 
-          <Pressable
-            style={[
-              styles.navButton,
-              isNightMode && styles.navButtonNight,
-              pageIndex >= pages.length - 1 && styles.navButtonDisabled,
-              pageIndex >= pages.length - 1 && isNightMode && styles.navButtonDisabledNight,
-            ]}
-            onPress={handleNextPage}
-            disabled={pageIndex >= pages.length - 1}
-          >
-            <Text
-              style={[
-                styles.navLabel,
-                isNightMode && styles.navLabelNight,
-                pageIndex >= pages.length - 1 && styles.navLabelDisabled,
-                pageIndex >= pages.length - 1 && isNightMode && styles.navLabelDisabledNight,
-              ]}
-            >
-              Siguiente
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={
-                pageIndex >= pages.length - 1
-                  ? isNightMode
-                    ? "#6F6A5F"
-                    : palette.textMuted
-                  : isNightMode
-                    ? "#F2E5C8"
-                    : palette.goldDeep
-              }
-            />
-          </Pressable>
+              <Pressable
+                style={[
+                  styles.navButton,
+                  isNightMode && styles.navButtonNight,
+                  pageIndex >= pages.length - 1 && styles.navButtonDisabled,
+                  pageIndex >= pages.length - 1 && isNightMode && styles.navButtonDisabledNight,
+                ]}
+                onPress={handleNextPage}
+                disabled={pageIndex >= pages.length - 1}
+              >
+                <Text
+                  style={[
+                    styles.navLabel,
+                    isNightMode && styles.navLabelNight,
+                    pageIndex >= pages.length - 1 && styles.navLabelDisabled,
+                    pageIndex >= pages.length - 1 && isNightMode && styles.navLabelDisabledNight,
+                  ]}
+                >
+                  Siguiente
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={
+                    pageIndex >= pages.length - 1
+                      ? isNightMode
+                        ? "#6F6A5F"
+                        : palette.textMuted
+                      : isNightMode
+                        ? "#F2E5C8"
+                        : palette.goldDeep
+                  }
+                />
+              </Pressable>
+            </View>
+          </AtelierCard>
         </View>
       </View>
 
@@ -460,19 +491,47 @@ export default function ReaderScreen() {
                   />
                 </Pressable>
                 <View style={styles.chapterSeparator} />
-                <Pressable style={styles.settingRow} onPress={handleAdjustFontScale}>
+                <View style={styles.settingRow}>
                   <View style={styles.settingCopy}>
                     <Text style={[styles.chapterItemTitle, isNightMode && styles.chapterItemTitleNight]}>
-                      Trazo
+                      Tamano
                     </Text>
                     <Text style={[styles.chapterItemMeta, isNightMode && styles.chapterItemMetaNight]}>
-                      Tamano {preferences.fontScale.toFixed(2).replace(".", ",")}
+                      Escala {preferences.fontScale.toFixed(2).replace(".", ",")}
                     </Text>
                   </View>
-                  <Ionicons name="text-outline" size={18} color={isNightMode ? "#E8D5A1" : palette.goldDeep} />
+                  <View style={styles.stepper}>
+                    <Pressable
+                      style={[styles.stepperButton, isNightMode && styles.stepperButtonNight]}
+                      onPress={handleDecreaseFontScale}
+                    >
+                      <Ionicons name="remove" size={16} color={isNightMode ? "#F0E0BE" : palette.goldDeep} />
+                    </Pressable>
+                    <Text style={[styles.stepperValue, isNightMode && styles.stepperValueNight]}>
+                      A
+                    </Text>
+                    <Pressable
+                      style={[styles.stepperButton, isNightMode && styles.stepperButtonNight]}
+                      onPress={handleIncreaseFontScale}
+                    >
+                      <Ionicons name="add" size={16} color={isNightMode ? "#F0E0BE" : palette.goldDeep} />
+                    </Pressable>
+                  </View>
+                </View>
+                <View style={styles.chapterSeparator} />
+                <Pressable style={styles.settingRow} onPress={handleToggleFontWeight}>
+                  <View style={styles.settingCopy}>
+                    <Text style={[styles.chapterItemTitle, isNightMode && styles.chapterItemTitleNight]}>
+                      Grosor
+                    </Text>
+                    <Text style={[styles.chapterItemMeta, isNightMode && styles.chapterItemMetaNight]}>
+                      {preferences.fontWeight === "strong" ? "Firme" : "Suave"}
+                    </Text>
+                  </View>
+                  <Ionicons name="text" size={18} color={isNightMode ? "#E8D5A1" : palette.goldDeep} />
                 </Pressable>
                 <View style={styles.chapterSeparator} />
-                <Pressable style={styles.settingRow} onPress={handleAdjustLineHeight}>
+                <View style={styles.settingRow}>
                   <View style={styles.settingCopy}>
                     <Text style={[styles.chapterItemTitle, isNightMode && styles.chapterItemTitleNight]}>
                       Respiro
@@ -481,8 +540,24 @@ export default function ReaderScreen() {
                       Interlineado {preferences.lineHeight.toFixed(1).replace(".", ",")}
                     </Text>
                   </View>
-                  <Ionicons name="reorder-three-outline" size={18} color={isNightMode ? "#E8D5A1" : palette.goldDeep} />
-                </Pressable>
+                  <View style={styles.stepper}>
+                    <Pressable
+                      style={[styles.stepperButton, isNightMode && styles.stepperButtonNight]}
+                      onPress={handleDecreaseLineHeight}
+                    >
+                      <Ionicons name="remove" size={16} color={isNightMode ? "#F0E0BE" : palette.goldDeep} />
+                    </Pressable>
+                    <Text style={[styles.stepperValue, isNightMode && styles.stepperValueNight]}>
+                      Aa
+                    </Text>
+                    <Pressable
+                      style={[styles.stepperButton, isNightMode && styles.stepperButtonNight]}
+                      onPress={handleIncreaseLineHeight}
+                    >
+                      <Ionicons name="add" size={16} color={isNightMode ? "#F0E0BE" : palette.goldDeep} />
+                    </Pressable>
+                  </View>
+                </View>
               </View>
 
             </ScrollView>
@@ -559,8 +634,7 @@ export default function ReaderScreen() {
 const styles = StyleSheet.create({
   readerLayout: {
     flex: 1,
-    gap: spacing.md,
-    paddingBottom: spacing.md,
+    gap: spacing.sm,
   },
   centered: {
     flex: 1,
@@ -621,6 +695,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
+  chromeRowTablet: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 860,
+  },
   chromeButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -666,6 +745,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFF8EA",
   },
+  readerSurfaceTablet: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 860,
+  },
   readerSurfaceNight: {
     backgroundColor: "#111E19",
   },
@@ -682,7 +766,6 @@ const styles = StyleSheet.create({
   },
   paragraph: {
     color: "#31271C",
-    fontFamily: typography.bodyRegularFamily,
   },
   paragraphNight: {
     color: "#F5EEE0",
@@ -696,6 +779,23 @@ const styles = StyleSheet.create({
   },
   emptyPageNight: {
     color: "#D6CAB5",
+  },
+  footerShell: {
+    width: "100%",
+  },
+  footerCard: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  footerCardTablet: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 860,
+    paddingHorizontal: spacing.md,
+  },
+  footerCardNight: {
+    backgroundColor: "#111E19",
   },
   footerRow: {
     flexDirection: "row",
@@ -746,6 +846,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: 2,
+    minWidth: 0,
   },
   progressLabel: {
     color: palette.text,
@@ -833,6 +934,36 @@ const styles = StyleSheet.create({
   settingCopy: {
     flex: 1,
     gap: 2,
+  },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  stepperButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: palette.lineStrong,
+    backgroundColor: "#F7ECDC",
+  },
+  stepperButtonNight: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(200,156,78,0.42)",
+  },
+  stepperValue: {
+    minWidth: 24,
+    textAlign: "center",
+    color: palette.text,
+    fontFamily: typography.displayAltFamily,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  stepperValueNight: {
+    color: "#F2E7D1",
   },
   groupTitle: {
     color: palette.goldDeep,

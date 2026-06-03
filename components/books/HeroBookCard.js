@@ -14,7 +14,7 @@ export function HeroBookCard({ book, onPress, onContinue }) {
       <AtelierCard style={[styles.card, isTablet && styles.cardTablet]} tone="dark">
         <BookCover book={book} tall style={styles.cover} />
         <View style={styles.content}>
-          <Text style={styles.eyebrow}>{book.source === "local" ? "En dispositivo" : "Continuar lectura"}</Text>
+          <Text style={styles.eyebrow}>Continuar lectura</Text>
           <Text style={styles.title}>{book.title}</Text>
           <Text style={styles.author}>{book.author}</Text>
           <View style={styles.metaRow}>

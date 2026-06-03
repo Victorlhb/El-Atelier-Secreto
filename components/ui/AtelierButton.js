@@ -8,6 +8,7 @@ export function AtelierButton({
   disabled = false,
   loading = false,
   style,
+  labelStyle,
 }) {
   const isPrimary = variant === "primary";
 
@@ -24,7 +25,16 @@ export function AtelierButton({
       ]}
     >
       <View>
-        <Text style={[styles.label, isPrimary ? styles.primaryLabel : styles.secondaryLabel]}>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.9}
+          style={[
+            styles.label,
+            isPrimary ? styles.primaryLabel : styles.secondaryLabel,
+            labelStyle,
+          ]}
+        >
           {loading ? "Cargando..." : label}
         </Text>
       </View>

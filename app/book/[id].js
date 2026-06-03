@@ -3,12 +3,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { BookCover } from "../../components/books/BookCover";
-import { DownloadButton } from "../../components/books/DownloadButton";
 import { AtelierButton } from "../../components/ui/AtelierButton";
 import { AtelierBanner } from "../../components/ui/AtelierBanner";
 import { AtelierCard } from "../../components/ui/AtelierCard";
 import { ScreenContainer } from "../../components/ui/ScreenContainer";
-import { SectionHeader } from "../../components/ui/SectionHeader";
 import { AtelierTopBar } from "../../components/ui/AtelierTopBar";
 import { TagChip } from "../../components/ui/TagChip";
 import { palette, spacing, typography } from "../../constants/theme";
@@ -16,6 +14,11 @@ import { useBookDetail, useVisibleBookMetadata } from "../../hooks/useBooks";
 import { useDeleteLocalBook } from "../../hooks/useLocalLibrary";
 import { buildReaderDocument } from "../../lib/bookReader";
 import { useAppStore } from "../../store/useAppStore";
+
+function hasSpecificDescription(description) {
+  const value = String(description || "").trim();
+  return Boolean(value) && value !== "Sinopsis pendiente para este tomo.";
+}
 
 export default function BookDetailScreen() {
   const router = useRouter();
@@ -29,6 +32,7 @@ export default function BookDetailScreen() {
   const [previewSource, setPreviewSource] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const deleteLocalBook = useDeleteLocalBook();
+  const isTablet = width >= 768;
 
   useVisibleBookMetadata(book ? [book] : []);
 
@@ -91,10 +95,20 @@ export default function BookDetailScreen() {
 
   const isFavorite = favoriteIds.includes(book.id);
   const genres = Array.isArray(book.genre) ? book.genre : [];
-  const sourceLabel = book.sourceLabel || "En dispositivo";
   const shouldShowLanguage = Boolean(book.language) && String(book.language).toLowerCase() !== "es";
   const shouldShowFormat = Boolean(book.format) && String(book.format).toUpperCase() !== "MOBI";
-  const shouldShowPreview = previewSource === "epub" && previewParagraphs.length > 0;
+  const shouldShowPreview = (previewSource === "epub" || previewSource === "mobi") && previewParagraphs.length > 0;
+  const showSynopsis = hasSpecificDescription(book.description);
+  const detailTags = [
+    book.pages > 0 ? `${book.pages} paginas` : "",
+    genres[0] || "",
+    shouldShowLanguage ? book.language.toUpperCase() : "",
+    shouldShowFormat ? book.format : "",
+  ].filter(Boolean);
+  const secondaryTags = [
+    ...genres.slice(1),
+    book.collection && !/local/i.test(String(book.collection)) ? book.collection : "",
+  ].filter(Boolean);
 
   const handleDelete = () => {
     Alert.alert(
@@ -131,53 +145,66 @@ export default function BookDetailScreen() {
         <Text style={styles.backText}>Volver</Text>
       </Pressable>
 
-      <AtelierBanner
-        title={book.title}
-        description={`Un tomo de ${book.author} guardado en tu dispositivo.`}
-        icon="book-outline"
-        compact
-      />
+      <AtelierBanner title={book.title} description={book.author} icon="book-outline" compact />
 
-      <AtelierCard style={styles.hero}>
-        <BookCover book={book} tall />
+      <AtelierCard style={[styles.hero, isTablet && styles.heroTablet]}>
+        <BookCover book={book} tall style={isTablet ? styles.heroCoverTablet : styles.heroCoverMobile} />
         <View style={styles.heroCopy}>
-          <Text style={styles.eyebrow}>{`${book.author} / ${sourceLabel}`}</Text>
-          <View style={styles.metaRow}>
-            <TagChip label={book.pages > 0 ? `${book.pages} paginas` : "Paginas sin contar"} active />
-            {shouldShowLanguage ? <TagChip label={book.language.toUpperCase()} /> : null}
-            {shouldShowFormat ? <TagChip label={book.format} /> : null}
-            {book.tone ? <TagChip label={book.tone} /> : null}
+          <View style={styles.heroHeader}>
+            <Text style={styles.heroTitle}>{book.title}</Text>
+            <Text style={styles.heroAuthor}>{book.author}</Text>
           </View>
-          <View style={styles.actions}>
-            <AtelierButton label="Abrir el tomo" onPress={() => router.push(`/reader/${book.id}`)} />
+
+          {detailTags.length > 0 ? (
+            <View style={styles.metaRow}>
+              {detailTags.map((tag) => (
+                <TagChip key={tag} label={tag} active />
+              ))}
+            </View>
+          ) : null}
+
+          {secondaryTags.length > 0 ? (
+            <View style={styles.metaRow}>
+              {secondaryTags.map((tag) => (
+                <TagChip key={tag} label={tag} />
+              ))}
+            </View>
+          ) : null}
+
+          <View style={[styles.actions, isTablet && styles.actionsTablet]}>
+            <AtelierButton
+              label="Abrir el tomo"
+              onPress={() => router.push(`/reader/${book.id}`)}
+              style={styles.actionPrimary}
+            />
             <AtelierButton
               label={isFavorite ? "Quitar del rincon" : "Llevar al rincon"}
               variant="secondary"
               onPress={() => toggleFavorite(book.id)}
+              style={styles.actionSecondary}
             />
             <AtelierButton
               label={deleteLocalBook.isPending ? "Eliminando..." : "Borrar del dispositivo"}
               variant="secondary"
               onPress={handleDelete}
               disabled={deleteLocalBook.isPending}
+              style={styles.actionDanger}
             />
           </View>
         </View>
       </AtelierCard>
 
-      <SectionHeader eyebrow="Taller" title="Guardar y abrir" framed={false} compact inverted />
-      <DownloadButton book={book} />
-
-      <AtelierCard style={styles.synopsis} tone="alt">
-        <Text style={styles.sectionTitle}>Sobre este tomo</Text>
-        <Text style={styles.body}>{book.description}</Text>
-        <View style={styles.tagRow}>
-          {book.rating > 0 ? <TagChip label={`Valoracion ${book.rating}`} /> : null}
-          {book.readers > 0 ? <TagChip label={`${book.readers} lectores`} /> : null}
-          {genres.length > 0 ? <TagChip label={genres.join(" / ")} /> : null}
-          <TagChip label={`Coleccion ${book.collection}`} />
-        </View>
-      </AtelierCard>
+      {showSynopsis ? (
+        <AtelierCard style={styles.synopsis} tone="alt">
+          <Text style={styles.sectionTitle}>Sobre este tomo</Text>
+          <Text style={styles.body}>{book.description}</Text>
+          <View style={styles.tagRow}>
+            {book.rating > 0 ? <TagChip label={`Valoracion ${book.rating}`} /> : null}
+            {book.readers > 0 ? <TagChip label={`${book.readers} lectores`} /> : null}
+            {genres.length > 0 ? <TagChip label={genres.join(" / ")} /> : null}
+          </View>
+        </AtelierCard>
+      ) : null}
 
       {previewLoading || shouldShowPreview ? (
         <AtelierCard style={styles.synopsis} tone="dark">
@@ -208,24 +235,41 @@ const styles = StyleSheet.create({
     fontFamily: typography.labelFamily,
   },
   hero: {
+    flexDirection: "row",
+    gap: spacing.md,
+    alignItems: "flex-start",
+  },
+  heroTablet: {
     gap: spacing.lg,
   },
   heroCopy: {
     gap: spacing.sm,
+    flex: 1,
+    minWidth: 0,
   },
-  eyebrow: {
-    color: palette.goldDeep,
+  heroCoverMobile: {
+    width: 112,
+    height: 164,
+  },
+  heroCoverTablet: {
+    width: 136,
+    height: 196,
+  },
+  heroHeader: {
+    gap: 4,
+  },
+  heroTitle: {
+    color: palette.text,
+    fontSize: 24,
+    lineHeight: 29,
+    fontFamily: typography.displayFamily,
     fontWeight: "700",
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-    fontSize: 12,
-    fontFamily: typography.labelFamily,
   },
-  description: {
+  heroAuthor: {
     color: palette.textSoft,
-    lineHeight: 24,
-    fontSize: 18,
-    fontFamily: typography.bodyRegularFamily,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: typography.bodySemiBoldFamily,
   },
   metaRow: {
     flexDirection: "row",
@@ -235,8 +279,20 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  actionsTablet: {
     gap: spacing.sm,
-    marginTop: spacing.sm,
+  },
+  actionPrimary: {
+    minHeight: 42,
+  },
+  actionSecondary: {
+    minHeight: 42,
+  },
+  actionDanger: {
+    minHeight: 42,
   },
   synopsis: {
     gap: spacing.md,

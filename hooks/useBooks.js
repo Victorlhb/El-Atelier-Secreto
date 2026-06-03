@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PAGE_SIZE } from "../constants/config";
 import { fetchGoogleBooksMetadata } from "../lib/googleBooks";
@@ -20,8 +20,8 @@ function normalizeBook(book) {
     description: book.description || "Sinopsis pendiente para este tomo.",
     genre: Array.isArray(book.genre) ? book.genre : [],
     language: book.language || "es",
-    tone: book.tone || (book.source === "local" ? "En dispositivo" : "Tomo"),
-    collection: book.collection || (book.source === "local" ? "Biblioteca local" : "Biblioteca"),
+    tone: book.tone || "",
+    collection: book.collection || "",
     progress: typeof book.progress === "number" ? book.progress : 0,
     readers: typeof book.readers === "number" ? book.readers : 0,
     rating: typeof book.rating === "number" ? book.rating : 0,
@@ -57,18 +57,34 @@ async function searchBooksPage(params, page) {
   });
 }
 
+function useDebouncedValue(value, delay = 220) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeout = globalThis.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => globalThis.clearTimeout(timeout);
+  }, [delay, value]);
+
+  return debouncedValue;
+}
+
 export function useBookSearch(overrides = {}) {
   const searchQuery = useAppStore((state) => state.searchQuery);
   const activeGenres = useAppStore((state) => state.activeGenres);
   const enabled = overrides.enabled ?? true;
+  const resolvedQuery = overrides.query ?? searchQuery;
+  const debouncedQuery = useDebouncedValue(resolvedQuery);
 
   const params = useMemo(
     () => ({
-      query: overrides.query ?? searchQuery,
+      query: debouncedQuery,
       genre: overrides.genre ?? activeGenres,
       language: overrides.language ?? "",
     }),
-    [activeGenres, overrides.genre, overrides.language, overrides.query, searchQuery]
+    [activeGenres, debouncedQuery, overrides.genre, overrides.language]
   );
 
   return useInfiniteQuery({

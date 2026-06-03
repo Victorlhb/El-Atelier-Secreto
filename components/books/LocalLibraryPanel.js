@@ -15,6 +15,10 @@ export function LocalLibraryPanel({ stats, state, loading, onImport, variant = "
   const sourceName = state.lastSourceLabel || "Biblioteca principal";
   const totalBooks = stats?.totalBooks || state.imported || 0;
   const totalSources = stats?.totalSources || (state.lastSourceLabel ? 1 : 0);
+  const progressLabel =
+    state.scanned > 0
+      ? `${formatCount(state.imported || 0)} de ${formatCount(state.scanned || 0)} tomos listos`
+      : "";
   const compact = variant === "discover";
 
   if (variant === "library") {
@@ -33,11 +37,26 @@ export function LocalLibraryPanel({ stats, state, loading, onImport, variant = "
             </View>
           </View>
           <View style={[styles.sourcePanel, !isTablet && styles.sourcePanelWide]}>
-            <Text style={styles.sourceEyebrow}>Ultima fuente</Text>
+            <Text style={styles.sourceEyebrow}>{isWorking ? "Indexando" : "Ultima fuente"}</Text>
             <Text style={styles.sourceName}>{sourceName}</Text>
-            <Text style={styles.sourceDetail}>Carpeta del dispositivo</Text>
+            <Text style={styles.sourceDetail}>
+              {isWorking ? progressLabel || state.message || "Ordenando tu biblioteca..." : "Carpeta del dispositivo"}
+            </Text>
           </View>
         </View>
+
+        {isWorking || state.message ? (
+          <View style={styles.statusBand}>
+            <Ionicons
+              name={isWorking ? "sync-outline" : state.status === "completed" ? "sparkles-outline" : "information-circle-outline"}
+              size={16}
+              color={palette.gold}
+            />
+            <Text style={styles.statusBandText}>
+              {state.message || "Tu biblioteca local esta preparada para descubrir y leer."}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={[styles.footerRow, !isTablet && styles.footerRowStacked]}>
           <Text style={styles.footerText}>
@@ -285,6 +304,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 17,
     fontFamily: typography.bodyRegularFamily,
+  },
+  statusBand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(212,175,103,0.2)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  statusBandText: {
+    flex: 1,
+    color: "#E0D0B5",
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: typography.bodySemiBoldFamily,
   },
   footerRow: {
     flexDirection: "row",

@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 import { palette, spacing, typography } from "../../constants/theme";
+import { useResponsive } from "../../hooks/useResponsive";
 import { AtelierCard } from "./AtelierCard";
 
 export function AtelierBanner({ title, description, icon = "sparkles-outline", compact = false }) {
+  const { isTablet } = useResponsive();
   return (
     <AtelierCard style={[styles.card, compact && styles.compactCard]}>
       <View style={styles.row}>
@@ -11,8 +13,18 @@ export function AtelierBanner({ title, description, icon = "sparkles-outline", c
           <Ionicons name={icon} size={compact ? 26 : 34} color={palette.goldDeep} />
         </View>
         <View style={styles.copy}>
-          <Text style={[styles.title, compact && styles.compactTitle]}>{title}</Text>
-          <Text style={[styles.description, compact && styles.compactDescription]}>{description}</Text>
+          <Text style={[styles.title, compact && styles.compactTitle, compact && !isTablet && styles.compactTitleMobile]}>
+            {title}
+          </Text>
+          <Text
+            style={[
+              styles.description,
+              compact && styles.compactDescription,
+              compact && !isTablet && styles.compactDescriptionMobile,
+            ]}
+          >
+            {description}
+          </Text>
         </View>
       </View>
       <Ionicons name="star-outline" size={18} color={palette.goldDeep} style={styles.star} />
@@ -33,7 +45,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: spacing.md,
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   emblem: {
     width: 108,
@@ -62,8 +74,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   compactTitle: {
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  compactTitleMobile: {
+    fontSize: 18,
+    lineHeight: 22,
   },
   description: {
     color: palette.textSoft,
@@ -72,8 +88,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyRegularFamily,
   },
   compactDescription: {
-    fontSize: 15,
-    lineHeight: 20,
+    color: "#3F3224",
+    fontSize: 16,
+    lineHeight: 21,
+    fontFamily: typography.bodySemiBoldFamily,
+  },
+  compactDescriptionMobile: {
+    fontSize: 13,
+    lineHeight: 17,
   },
   star: {
     position: "absolute",

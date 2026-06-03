@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { bookGenres } from "../../constants/mockData";
 import { palette, spacing, typography } from "../../constants/theme";
+import { useResponsive } from "../../hooks/useResponsive";
 import { AtelierCard } from "../ui/AtelierCard";
 import { SearchInput } from "../ui/SearchInput";
 import { TagChip } from "../ui/TagChip";
@@ -12,8 +13,11 @@ export function BookSearch({
   onChangeQuery,
   activeGenres,
   onToggleGenre,
+  compact = false,
 }) {
+  const { isTablet } = useResponsive();
   const [genresOpen, setGenresOpen] = useState(false);
+  const resolvedCompact = compact || !isTablet;
 
   useEffect(() => {
     if (activeGenres.length > 0) {
@@ -22,14 +26,14 @@ export function BookSearch({
   }, [activeGenres.length]);
 
   return (
-    <AtelierCard tone="alt">
-      <View style={styles.container}>
-        <SearchInput value={query} onChangeText={onChangeQuery} />
-        <View style={styles.genreBlock}>
+    <AtelierCard tone="alt" style={resolvedCompact && styles.cardCompact}>
+      <View style={[styles.container, resolvedCompact && styles.containerCompact]}>
+        <SearchInput value={query} onChangeText={onChangeQuery} compact={resolvedCompact} />
+        <View style={[styles.genreBlock, resolvedCompact && styles.genreBlockCompact]}>
           <Pressable style={styles.genreToggle} onPress={() => setGenresOpen((current) => !current)}>
             <View style={styles.genreHeader}>
               <View style={styles.rule} />
-              <Text style={styles.genreTitle}>
+              <Text style={[styles.genreTitle, resolvedCompact && styles.genreTitleCompact]}>
                 Generos{activeGenres.length > 0 ? ` (${activeGenres.length})` : ""}
               </Text>
               <View style={styles.rule} />
@@ -42,7 +46,7 @@ export function BookSearch({
           </Pressable>
 
           {genresOpen ? (
-            <View style={styles.genres}>
+            <View style={[styles.genres, resolvedCompact && styles.genresCompact]}>
               {bookGenres.map((genre) => (
                 <TagChip
                   key={genre}
@@ -60,11 +64,22 @@ export function BookSearch({
 }
 
 const styles = StyleSheet.create({
+  cardCompact: {
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
+  },
   container: {
     gap: spacing.md,
   },
+  containerCompact: {
+    gap: spacing.sm,
+  },
   genreBlock: {
     gap: spacing.sm,
+  },
+  genreBlockCompact: {
+    gap: spacing.xs,
   },
   genreToggle: {
     flexDirection: "row",
@@ -76,6 +91,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+  },
+  genresCompact: {
+    gap: spacing.xs,
   },
   genreHeader: {
     flexDirection: "row",
@@ -95,5 +113,9 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: typography.labelFamily,
     fontWeight: "700",
+  },
+  genreTitleCompact: {
+    fontSize: 12,
+    letterSpacing: 1.3,
   },
 });

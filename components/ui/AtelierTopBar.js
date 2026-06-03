@@ -1,19 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { palette, typography } from "../../constants/theme";
+import { useResponsive } from "../../hooks/useResponsive";
 
-export function AtelierTopBar({ rightIcon = "person-circle-outline", onRightPress, emblem = "sparkles-outline" }) {
+const atelierLogo = require("../../assets/branding/atelier-logo.jpg");
+
+export function AtelierTopBar({ rightIcon = "person-circle-outline", onRightPress }) {
+  const { isTablet } = useResponsive();
+
   return (
     <View style={styles.row}>
-      <Ionicons name={emblem} size={20} color={palette.gold} />
+      <View style={[styles.logoFrame, !isTablet && styles.logoFrameMobile]}>
+        <Image source={atelierLogo} style={styles.logoImage} resizeMode="cover" />
+      </View>
       <View style={styles.brandWrap}>
         <View style={styles.line} />
-        <Text style={styles.brand}>El Atelier Secreto</Text>
+        <Text style={[styles.brand, !isTablet && styles.brandMobile]}>El Atelier Secreto</Text>
         <View style={styles.line} />
       </View>
       {rightIcon ? (
         <Pressable onPress={onRightPress} style={styles.iconButton}>
-          <Ionicons name={rightIcon} size={22} color={palette.gold} />
+          <Ionicons name={rightIcon} size={isTablet ? 22 : 20} color={palette.goldDeep} />
         </Pressable>
       ) : (
         <View style={styles.iconSpacer} />
@@ -28,6 +35,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+  },
+  logoFrame: {
+    width: 38,
+    height: 54,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(188, 200, 78, 0.62)",
+    backgroundColor: "#3E2A1D",
+  },
+  logoFrameMobile: {
+    width: 34,
+    height: 48,
+    borderRadius: 9,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
   },
   brandWrap: {
     flex: 1,
@@ -47,6 +72,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
+  },
+  brandMobile: {
+    fontSize: 18,
+    letterSpacing: 0.4,
   },
   iconButton: {
     width: 34,

@@ -1,14 +1,19 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { radii } from "../../constants/theme";
 
-export function BookCover({ book, tall = false, style }) {
-  const colors = book.coverPalette || ["#1A3026", "#3B5A46", "#C89C4E"];
+function BookCoverComponent({ book, tall = false, style }) {
+  const colors = useMemo(
+    () => book.coverPalette || ["#1A3026", "#3B5A46", "#C89C4E"],
+    [book.coverPalette]
+  );
   const [imageFailed, setImageFailed] = useState(false);
+  const [imageReady, setImageReady] = useState(false);
   const hasCoverImage = Boolean(book.cover_url) && !imageFailed;
 
   useEffect(() => {
     setImageFailed(false);
+    setImageReady(false);
   }, [book.cover_url]);
 
   return (
@@ -28,10 +33,20 @@ export function BookCover({ book, tall = false, style }) {
           source={{ uri: book.cover_url }}
           style={styles.image}
           resizeMode="cover"
+          fadeDuration={120}
+          onLoad={() => setImageReady(true)}
           onError={() => setImageFailed(true)}
         />
       ) : null}
-      <View style={[styles.layer, { backgroundColor: colors[1], opacity: hasCoverImage ? 0.08 : 0.26 }]} />
+      <View
+        style={[
+          styles.layer,
+          {
+            backgroundColor: colors[1],
+            opacity: hasCoverImage ? (imageReady ? 0.04 : 0.12) : 0.26,
+          },
+        ]}
+      />
       <View style={[styles.orbit, { borderColor: colors[2] }]} />
       <View style={[styles.topRibbon, { backgroundColor: colors[2] }]} />
       <View style={[styles.bottomRibbon, { backgroundColor: colors[2] }]} />
@@ -42,6 +57,18 @@ export function BookCover({ book, tall = false, style }) {
     </View>
   );
 }
+
+export const BookCover = memo(
+  BookCoverComponent,
+  (prevProps, nextProps) =>
+    prevProps.tall === nextProps.tall &&
+    prevProps.book.id === nextProps.book.id &&
+    prevProps.book.cover_url === nextProps.book.cover_url &&
+    prevProps.book.title === nextProps.book.title &&
+    prevProps.book.author === nextProps.book.author &&
+    prevProps.book.coverPalette === nextProps.book.coverPalette &&
+    prevProps.style === nextProps.style
+);
 
 const styles = StyleSheet.create({
   cover: {

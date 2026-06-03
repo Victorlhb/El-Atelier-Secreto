@@ -3,8 +3,16 @@
     "name": "El Atelier Secreto",
     "slug": "el-atelier-secreto",
     "scheme": "elateliersecreto",
+    "icon": "./assets/branding/app-icon.png",
     "orientation": "default",
     "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.victorexpo11.elateliersecreto",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/branding/adaptive-icon.png",
+        "backgroundColor": "#3E2A1D"
+      }
+    },
     "plugins": [
       "expo-router",
       "expo-font",
@@ -15,6 +23,12 @@
     },
     "assetBundlePatterns": [
       "**/*"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6801aed9-754c-495b-af2c-a7d87caec691"
+      }
+    }
   }
 }

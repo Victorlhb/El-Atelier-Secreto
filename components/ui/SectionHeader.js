@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { AtelierCard } from "./AtelierCard";
 import { palette, spacing, typography } from "../../constants/theme";
+import { useResponsive } from "../../hooks/useResponsive";
 
 export function SectionHeader({
   eyebrow,
@@ -11,13 +12,32 @@ export function SectionHeader({
   framed = true,
   compact = false,
 }) {
+  const { isTablet } = useResponsive();
   const content = (
     <View style={styles.row}>
       <View style={styles.copy}>
         {eyebrow ? <Text style={[styles.eyebrow, inverted && styles.eyebrowInverted]}>{eyebrow}</Text> : null}
-        <Text style={[styles.title, compact && styles.titleCompact, inverted && styles.titleInverted]}>{title}</Text>
+        <Text
+          style={[
+            styles.title,
+            compact && styles.titleCompact,
+            compact && !isTablet && styles.titleCompactMobile,
+            inverted && styles.titleInverted,
+          ]}
+        >
+          {title}
+        </Text>
         {description ? (
-          <Text style={[styles.description, compact && styles.descriptionCompact, inverted && styles.descriptionInverted]}>{description}</Text>
+          <Text
+            style={[
+              styles.description,
+              compact && styles.descriptionCompact,
+              compact && !isTablet && styles.descriptionCompactMobile,
+              inverted && styles.descriptionInverted,
+            ]}
+          >
+            {description}
+          </Text>
         ) : null}
       </View>
       <View style={styles.ruleRow}>
@@ -58,7 +78,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   eyebrowInverted: {
-    color: "#C9A24A",
+    color: "#D9B56C",
   },
   title: {
     color: palette.text,
@@ -68,11 +88,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   titleInverted: {
-    color: "#F5EEE0",
+    color: "#EBD2A1",
   },
   titleCompact: {
     fontSize: 30,
     lineHeight: 34,
+  },
+  titleCompactMobile: {
+    fontSize: 18,
+    lineHeight: 22,
   },
   description: {
     color: palette.textSoft,
@@ -81,11 +105,17 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   descriptionCompact: {
-    fontSize: 18,
-    lineHeight: 24,
+    color: "#3D3022",
+    fontSize: 16,
+    lineHeight: 21,
+    fontFamily: typography.bodySemiBoldFamily,
+  },
+  descriptionCompactMobile: {
+    fontSize: 14,
+    lineHeight: 18,
   },
   descriptionInverted: {
-    color: "#E6DDCF",
+    color: "#FFF8EE",
   },
   ruleRow: {
     flexDirection: "row",
@@ -107,6 +137,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(137,103,36,0.18)",
   },
   ruleInverted: {
-    backgroundColor: "rgba(217,208,194,0.22)",
+    backgroundColor: "rgba(255,248,238,0.26)",
   },
 });

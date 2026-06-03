@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { palette, spacing, typography } from "../../constants/theme";
+import { spacing, typography } from "../../constants/theme";
+import { useResponsive } from "../../hooks/useResponsive";
 import { AtelierCard } from "../ui/AtelierCard";
 import { AtelierButton } from "../ui/AtelierButton";
 import { BookCover } from "./BookCover";
@@ -10,21 +11,26 @@ export function BookGridTile({
   onRead,
   onToggleSaved,
   isSaved = false,
-  width = 160,
+  width,
 }) {
+  const { isTablet } = useResponsive();
   const detail = [book.genre?.[0], book.pages > 0 ? `${book.pages} pags.` : ""].filter(Boolean).join(" / ");
 
   return (
-    <Pressable onPress={onPress} style={[styles.pressable, width ? { width } : styles.fullWidth]}>
-      <AtelierCard tone="alt" style={styles.card}>
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.pressable,
+        styles.fullWidth,
+        isTablet && width ? { width, maxWidth: width } : null,
+      ]}
+    >
+      <AtelierCard tone="alt" style={[styles.card, isTablet ? styles.cardTablet : styles.cardMobile]}>
         <View style={styles.coverWrap}>
-          <BookCover book={book} style={styles.cover} />
+          <BookCover book={book} style={[styles.cover, isTablet && styles.coverTablet]} />
         </View>
         <View style={styles.body}>
-          <Text style={styles.author} numberOfLines={1}>
-            {book.author}
-          </Text>
-          <Text style={styles.title} numberOfLines={3}>
+          <Text style={[styles.title, isTablet && styles.titleTablet]} numberOfLines={isTablet ? 2 : 3}>
             {book.title}
           </Text>
           {detail ? (
@@ -32,13 +38,19 @@ export function BookGridTile({
               {detail}
             </Text>
           ) : null}
-          <View style={styles.actions}>
-            <AtelierButton label="Leer" onPress={onRead} style={styles.primaryAction} />
+          <View style={[styles.actions, !isTablet && styles.actionsMobile]}>
+            <AtelierButton
+              label="Leer"
+              onPress={onRead}
+              style={[styles.primaryAction, !isTablet && styles.mobileAction]}
+              labelStyle={styles.actionLabel}
+            />
             <AtelierButton
               label={isSaved ? "Guardado" : "Guardar"}
               onPress={onToggleSaved}
               variant="secondary"
-              style={styles.secondaryAction}
+              style={[styles.secondaryAction, !isTablet && styles.mobileAction]}
+              labelStyle={styles.actionLabel}
             />
           </View>
         </View>
@@ -58,58 +70,81 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
-    minHeight: 168,
-    paddingTop: 12,
-    paddingBottom: 12,
-    paddingHorizontal: 12,
     width: "100%",
+  },
+  cardMobile: {
+    minHeight: 134,
+    paddingTop: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 10,
+  },
+  cardTablet: {
+    minHeight: 150,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
   },
   coverWrap: {
     paddingTop: 2,
   },
   cover: {
-    width: 68,
-    height: 100,
+    width: 56,
+    height: 82,
+  },
+  coverTablet: {
+    width: 66,
+    height: 96,
   },
   body: {
     flex: 1,
-    gap: 3,
-    minHeight: 100,
+    minWidth: 0,
+    gap: 4,
+    minHeight: 82,
   },
-  author: {
-    color: palette.goldDeep,
-    fontSize: 12,
-    fontFamily: typography.labelFamily,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
+
   title: {
-    color: palette.text,
-    fontSize: 18,
-    lineHeight: 22,
+    color: "#1D160F",
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: typography.displayFamily,
     fontWeight: "700",
   },
+  titleTablet: {
+    fontSize: 17,
+    lineHeight: 21,
+  },
   detail: {
-    color: palette.textSoft,
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: typography.bodyRegularFamily,
+    color: "#53412E",
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: typography.bodySemiBoldFamily,
   },
   actions: {
     flexDirection: "row",
     gap: spacing.xs,
     marginTop: "auto",
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
+    alignItems: "center",
+  },
+  actionsMobile: {
+    paddingTop: 4,
   },
   primaryAction: {
-    minHeight: 34,
+    minHeight: 32,
     borderRadius: 12,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 12,
   },
   secondaryAction: {
-    minHeight: 34,
+    minHeight: 32,
     borderRadius: 12,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 12,
+  },
+  mobileAction: {
+    flexShrink: 1,
+    minWidth: 78,
+  },
+  actionLabel: {
+    fontSize: 13,
+    letterSpacing: 0.2,
   },
 });

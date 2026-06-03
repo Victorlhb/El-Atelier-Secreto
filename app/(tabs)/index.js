@@ -15,7 +15,7 @@ import { useAppStore } from "../../store/useAppStore";
 
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { isTablet, isLargeTablet } = useResponsive();
+  const { width, contentWidth, isTablet, isLargeTablet } = useResponsive();
   const searchQuery = useAppStore((state) => state.searchQuery);
   const activeGenres = useAppStore((state) => state.activeGenres);
   const favoriteIds = useAppStore((state) => state.favoriteIds);
@@ -30,8 +30,14 @@ export default function DiscoverScreen() {
     () => search.data?.pages.flatMap((page) => page.items) || [],
     [search.data?.pages]
   );
-  const numColumns = isLargeTablet ? 3 : isTablet ? 2 : 1;
-  const gridItemWidth = isLargeTablet ? 316 : isTablet ? 336 : undefined;
+  const numColumns = isTablet ? 2 : 1;
+  const horizontalPadding = spacing.md * 2;
+  const interColumnGap = spacing.sm;
+  const availableWidth = Math.min(width, contentWidth) - horizontalPadding;
+  const gridItemWidth = isTablet
+    ? Math.min(Math.floor((availableWidth - interColumnGap) / 2), isLargeTablet ? 420 : 380)
+    : undefined;
+  const estimatedRowHeight = isTablet ? 166 : 150;
 
   useVisibleBookMetadata(results);
 
@@ -43,8 +49,18 @@ export default function DiscoverScreen() {
         data={results}
         numColumns={numColumns}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         renderItem={({ item }) => (
-          <View style={styles.gridItem}>
+          <View
+            style={[
+              styles.gridItem,
+              numColumns > 1 && gridItemWidth
+                ? { width: gridItemWidth, maxWidth: gridItemWidth }
+                : styles.gridItemMobile,
+            ]}
+          >
             <BookGridTile
               book={item}
               width={gridItemWidth}
@@ -71,10 +87,11 @@ export default function DiscoverScreen() {
               onChangeQuery={setSearchQuery}
               activeGenres={activeGenres}
               onToggleGenre={toggleGenre}
+              compact
             />
 
             <SectionHeader
-              eyebrow="Dispositivo"
+              eyebrow="Estantería"
               title={shouldShowFilteredResults ? "Resultados del atelier" : "Todos tus tomos"}
               description={
                 shouldShowFilteredResults
@@ -83,6 +100,7 @@ export default function DiscoverScreen() {
               }
               framed={false}
               compact
+              inverted
             />
           </View>
         }
@@ -105,8 +123,13 @@ export default function DiscoverScreen() {
 
           </View>
         }
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         contentContainerStyle={styles.content}
+        getItemLayout={(_data, index) => ({
+          length: estimatedRowHeight,
+          offset: estimatedRowHeight * Math.floor(index / numColumns),
+          index,
+        })}
         onEndReachedThreshold={0.45}
         onEndReached={() => {
           if (search.hasNextPage && !search.isFetchingNextPage) {
@@ -134,16 +157,19 @@ const styles = StyleSheet.create({
   },
   stack: {
     gap: spacing.md,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
   },
   gridRow: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     justifyContent: "space-between",
   },
   gridItem: {
-    flex: 1,
+    flexGrow: 0,
+    marginBottom: spacing.sm,
+  },
+  gridItemMobile: {
     width: "100%",
-    marginBottom: spacing.md,
+    alignSelf: "stretch",
   },
   footer: {
     gap: spacing.md,

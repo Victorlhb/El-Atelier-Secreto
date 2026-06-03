@@ -11,15 +11,24 @@ export function ScreenContainer({
   edges,
   tone = "atelier",
 }) {
-  const { contentWidth } = useResponsive();
+  const { contentWidth, isTablet } = useResponsive();
   const resolvedEdges = edges || safeEdges;
+  const contentGap = isTablet ? spacing.lg : spacing.md;
+  const horizontalPadding = isTablet ? spacing.lg : spacing.md;
+  const topPadding = isTablet ? spacing.lg : spacing.sm + 2;
+  const bottomPadding = isTablet ? spacing.xxl + spacing.sm : spacing.xxl;
 
   const inner = (
     <View
       style={[
         styles.content,
         !scroll && styles.contentFill,
-        { maxWidth: contentWidth },
+        {
+          maxWidth: contentWidth,
+          paddingHorizontal: horizontalPadding,
+          paddingTop: topPadding,
+          gap: contentGap,
+        },
         contentContainerStyle,
       ]}
     >
@@ -48,7 +57,10 @@ export function ScreenContainer({
       {tone === "night" ? <View style={styles.nightVeil} /> : null}
       <SafeAreaView style={styles.safeArea} edges={resolvedEdges}>
         {scroll ? (
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
+            showsVerticalScrollIndicator={false}
+          >
             {inner}
           </ScrollView>
         ) : (
@@ -147,9 +159,6 @@ const styles = StyleSheet.create({
   content: {
     width: "100%",
     alignSelf: "center",
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    gap: spacing.lg,
   },
   contentFill: {
     flex: 1,

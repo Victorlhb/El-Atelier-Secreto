@@ -5,7 +5,7 @@ import { palette, spacing, typography } from "../../constants/theme";
 export function SearchInput({
   value,
   onChangeText,
-  placeholder = "Buscar por titulo, autora o saga",
+  placeholder = "Busca aquello que deseas",
   compact = false,
 }) {
   return (
@@ -49,17 +49,19 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyRegularFamily,
   },
   compactInput: {
-    fontSize: 16,
+    fontSize: 14,
+    color: "#2D241A",
+    fontFamily: typography.bodySemiBoldFamily,
   },
   emblem: {
     width: 34,
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: "rgba(167,131,66,0.24)",
+    borderColor: "rgba(33, 75, 25, 0.24)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(251,241,223,0.95)",
+    backgroundColor: "rgba(233, 207, 146, 0.8)",
   },
   compactEmblem: {
     width: 30,

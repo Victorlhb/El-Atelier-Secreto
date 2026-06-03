@@ -1,11 +1,15 @@
 param(
   [string]$SourceRoot = "",
   [string]$OutputRoot = "",
-  [string]$ConverterPath = "C:\Program Files\Calibre2\ebook-convert.exe"
+  [string]$ConverterPath = "C:\Program Files\Calibre2\ebook-convert.exe",
+  [string]$AuthorPattern = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if ($null -ne (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue)) {
+  $PSNativeCommandUseErrorActionPreference = $false
+}
 
 function Write-Status {
   param([string]$Message)
@@ -34,10 +38,22 @@ if (-not (Test-Path -LiteralPath $OutputRoot)) {
 }
 
 $files = Get-ChildItem -LiteralPath $resolvedSource -Recurse -Filter *.epub -File | Sort-Object FullName
+
+if (-not [string]::IsNullOrWhiteSpace($AuthorPattern)) {
+  $files = @(
+    $files | Where-Object {
+      $_.BaseName -match $AuthorPattern -or $_.DirectoryName -match $AuthorPattern
+    }
+  )
+}
+
 $total = @($files).Count
 
 Write-Status "SOURCE=$resolvedSource"
 Write-Status "OUTPUT=$OutputRoot"
+if (-not [string]::IsNullOrWhiteSpace($AuthorPattern)) {
+  Write-Status "AUTHOR_PATTERN=$AuthorPattern"
+}
 Write-Status "TOTAL_EPUB=$total"
 
 $processed = 0
@@ -65,17 +81,17 @@ foreach ($file in $files) {
   }
 
   try {
-    & $ConverterPath $file.FullName $destination *> $null
+    & $ConverterPath $file.FullName $destination 1> $null 2> $null
 
     if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $destination)) {
       $converted += 1
     } else {
       $failed += 1
-      Write-Error "Fallo al convertir: $($file.FullName)"
+      Write-Status "FAIL file=$($file.FullName)"
     }
   } catch {
     $failed += 1
-    Write-Error "Excepcion al convertir $($file.FullName): $($_.Exception.Message)"
+    Write-Status "EXCEPTION file=$($file.FullName) message=$($_.Exception.Message)"
   }
 
   if (($processed % 25) -eq 0) {

@@ -26,9 +26,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   description: {
-    color: palette.textSoft,
-    fontFamily: typography.bodyRegularFamily,
-    fontSize: 18,
-    lineHeight: 26,
+    color: "#4A3A2A",
+    fontFamily: typography.bodySemiBoldFamily,
+    fontSize: 17,
+    lineHeight: 24,
   },
 });

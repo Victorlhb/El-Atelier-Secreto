@@ -18,6 +18,7 @@ export const useAppStore = create((set, get) => ({
     theme: "pergamino",
     fontScale: 1,
     lineHeight: 1.8,
+    fontWeight: "regular",
   },
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   toggleGenre: (genre) =>
